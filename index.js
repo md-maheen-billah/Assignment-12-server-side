@@ -36,7 +36,6 @@ async function run() {
     // save a user data in db
     app.put("/users", async (req, res) => {
       const user = req.body;
-
       const query = { email: user?.email };
       // check if user already exists in db
       const isExist = await usersCollection.findOne(query);
@@ -67,6 +66,12 @@ async function run() {
       //     subject: "Welcome to Stayvista!",
       //     message: `Hope you will find you destination`,
       //   });
+      res.send(result);
+    });
+
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email });
       res.send(result);
     });
 
