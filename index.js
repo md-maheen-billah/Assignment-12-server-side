@@ -50,6 +50,7 @@ async function run() {
   try {
     const db = client.db("destinedAffinityDB");
     const usersCollection = db.collection("users");
+    const biodataCollection = db.collection("biodata");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -121,6 +122,25 @@ async function run() {
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const result = await usersCollection.findOne({ email });
+      res.send(result);
+    });
+
+    app.put("/biodata", async (req, res) => {
+      const user = req.body;
+      const query = { email: user?.email };
+
+      // save user for the first time
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...user,
+        },
+      };
+      const result = await biodataCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
 
