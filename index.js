@@ -129,11 +129,23 @@ async function run() {
       const user = req.body;
       const query = { email: user?.email };
 
+      const existingBiodata = await biodataCollection.findOne(query);
+
+      // If the document doesn't exist or it doesn't have a biodataId, generate a new one
+      let biodataId;
+      if (!existingBiodata || !existingBiodata.biodataId) {
+        const count = await biodataCollection.countDocuments();
+        biodataId = count + 1;
+      } else {
+        biodataId = existingBiodata.biodataId;
+      }
+
       // save user for the first time
       const options = { upsert: true };
       const updateDoc = {
         $set: {
           ...user,
+          biodataId,
         },
       };
       const result = await biodataCollection.updateOne(
@@ -141,6 +153,12 @@ async function run() {
         updateDoc,
         options
       );
+      res.send(result);
+    });
+
+    app.get("/biodata/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await biodataCollection.findOne({ email });
       res.send(result);
     });
 
