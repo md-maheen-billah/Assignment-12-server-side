@@ -5,7 +5,7 @@ const cookieParser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // middlewares
 app.use(express.json());
@@ -189,7 +189,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/biodata-details/:id", async (req, res) => {
+    app.get("/biodata-details/:id", verifyToken, async (req, res) => {
       const id = parseInt(req.params.id);
       const result = await biodataCollection.findOne(
         { biodataId: id },
@@ -198,7 +198,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/biodata-details-premium/:id", async (req, res) => {
+    app.get("/biodata-details-premium/:id", verifyToken, async (req, res) => {
       const id = parseInt(req.params.id);
       const result = await biodataCollection.findOne(
         { biodataId: id },
@@ -207,7 +207,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/requested-access", async (req, res) => {
+    app.post("/requested-access", verifyToken, async (req, res) => {
       const requests = req.body;
       const { biodataId, email } = req.body;
       const existingRequest = await accessRequestCollection.findOne({
@@ -222,7 +222,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/requested-access/:id/:email", async (req, res) => {
+    app.get("/requested-access/:id/:email", verifyToken, async (req, res) => {
       const id = parseInt(req.params.id);
       const email = req.params.email;
       const result = await accessRequestCollection.findOne({
@@ -232,15 +232,44 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/requested-access-dashboard/:email", async (req, res) => {
-      const email = req.params.email;
-      const result = await accessRequestCollection
-        .find({
-          email,
-        })
-        .toArray();
+    app.get(
+      "/requested-access-dashboard/:email",
+      verifyToken,
+      async (req, res) => {
+        const tokenEmail = req.user.email;
+        const email = req.params.email;
+        if (tokenEmail !== email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+        const result = await accessRequestCollection
+          .find({
+            email,
+          })
+          .toArray();
+        res.send(result);
+      }
+    );
+
+    app.get("/requested-access-dashboard", verifyToken, async (req, res) => {
+      const result = await accessRequestCollection.find().toArray();
       res.send(result);
     });
+
+    app.patch(
+      "/requested-access-dashboard/:id",
+      verifyToken,
+      async (req, res) => {
+        const id = req.params.id;
+        const update = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const result = await accessRequestCollection.updateOne(filter, {
+          $set: {
+            status: update.status,
+          },
+        });
+        res.send(result);
+      }
+    );
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
