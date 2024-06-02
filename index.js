@@ -163,6 +163,26 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/biodata-public", async (req, res) => {
+      const result = await biodataCollection
+        .find(
+          {},
+          {
+            projection: {
+              _id: 0,
+              biodataId: 1,
+              sex: 1,
+              image: 1,
+              permanentDivision: 1,
+              age: 1,
+              occupation: 1,
+            },
+          }
+        )
+        .toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
