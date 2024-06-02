@@ -109,6 +109,18 @@ async function run() {
       res.send(result);
     });
 
+    const verifyAdmin = async (req, res, next) => {
+      console.log("hello");
+      const user = req.user;
+      const query = { email: user?.email };
+      const result = await usersCollection.findOne(query);
+      console.log(result?.role);
+      if (!result || result?.role !== "admin")
+        return res.status(401).send({ message: "unauthorized access!!" });
+
+      next();
+    };
+
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const result = await usersCollection.findOne({ email });
@@ -250,14 +262,20 @@ async function run() {
       }
     );
 
-    app.get("/requested-access-dashboard", verifyToken, async (req, res) => {
-      const result = await accessRequestCollection.find().toArray();
-      res.send(result);
-    });
+    app.get(
+      "/requested-access-dashboard",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await accessRequestCollection.find().toArray();
+        res.send(result);
+      }
+    );
 
     app.patch(
       "/requested-access-dashboard/:id",
       verifyToken,
+      verifyAdmin,
       async (req, res) => {
         const id = req.params.id;
         const update = req.body;
