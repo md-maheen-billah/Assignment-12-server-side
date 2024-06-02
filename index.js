@@ -18,23 +18,6 @@ app.use(
 );
 app.use(cookieParser());
 
-// Verify Token Middleware
-const verifyToken = async (req, res, next) => {
-  const token = req.cookies?.token;
-  console.log(token);
-  if (!token) {
-    return res.status(401).send({ message: "unauthorized access" });
-  }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      console.log(err);
-      return res.status(401).send({ message: "unauthorized access" });
-    }
-    req.user = decoded;
-    next();
-  });
-};
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xxkyfyl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -52,7 +35,7 @@ async function run() {
     const usersCollection = db.collection("users");
     const biodataCollection = db.collection("biodata");
 
-    // auth related api
+    // jwt generate
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -67,20 +50,34 @@ async function run() {
         .send({ success: true });
     });
 
-    // Logout
-    app.get("/logout", async (req, res) => {
-      try {
-        res
-          .clearCookie("token", {
-            maxAge: 0,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-          })
-          .send({ success: true });
-        console.log("Logout successful");
-      } catch (err) {
-        res.status(500).send(err);
+    // Verify Token Middleware
+    const verifyToken = async (req, res, next) => {
+      const token = req?.cookies?.token;
+      console.log(token);
+      if (!token) {
+        return res.status(401).send({ message: "unauthorized access" });
       }
+      if (token) {
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+          if (err) {
+            res.status(401).send({ message: "unauthorized access" });
+          }
+          req.user = decoded;
+          next();
+        });
+      }
+    };
+
+    // clear token on logout
+    const cookieOption = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production" ? true : false,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    };
+    app.post("/logout", (req, res) => {
+      res
+        .clearCookie("token", { ...cookieOption, maxAge: 0 })
+        .send({ success: true });
     });
 
     // save a user data in db
@@ -125,7 +122,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/biodata", async (req, res) => {
+    app.put("/biodata", verifyToken, async (req, res) => {
       const user = req.body;
       const query = { email: user?.email };
 
@@ -156,8 +153,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/biodata/:email", async (req, res) => {
+    app.get("/biodata/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
       const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const result = await biodataCollection.findOne({ email });
       res.send(result);
     });
