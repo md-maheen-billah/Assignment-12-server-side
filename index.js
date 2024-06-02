@@ -34,6 +34,7 @@ async function run() {
     const db = client.db("destinedAffinityDB");
     const usersCollection = db.collection("users");
     const biodataCollection = db.collection("biodata");
+    const accessRequestCollection = db.collection("accessRequest");
 
     // jwt generate
     app.post("/jwt", async (req, res) => {
@@ -87,16 +88,8 @@ async function run() {
       // check if user already exists in db
       const isExist = await usersCollection.findOne(query);
       if (isExist) {
-        if (user.status === "requested") {
-          // if existing user try to change his role
-          const result = await usersCollection.updateOne(query, {
-            $set: { status: user?.status },
-          });
-          return res.send(result);
-        } else {
-          // if existing user login again
-          return res.send(isExist);
-        }
+        // if existing user login again
+        return res.send(isExist);
       }
 
       // save user for the first time
@@ -163,6 +156,19 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/biodata-access-own/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const result = await biodataCollection.findOne(
+        { email },
+        { projection: { _id: 0, biodataId: 1 } }
+      );
+      res.send(result);
+    });
+
     app.get("/biodata-public", async (req, res) => {
       const result = await biodataCollection
         .find(
@@ -180,6 +186,49 @@ async function run() {
           }
         )
         .toArray();
+      res.send(result);
+    });
+
+    app.get("/biodata-details/:id", async (req, res) => {
+      const id = parseInt(req.params.id);
+      const result = await biodataCollection.findOne(
+        { biodataId: id },
+        { projection: { email: 0, _id: 0, mobile: 0 } }
+      );
+      res.send(result);
+    });
+
+    app.get("/biodata-details-premium/:id", async (req, res) => {
+      const id = parseInt(req.params.id);
+      const result = await biodataCollection.findOne(
+        { biodataId: id },
+        { projection: { email: 1, _id: 0, mobile: 1 } }
+      );
+      res.send(result);
+    });
+
+    app.post("/requested-access", async (req, res) => {
+      const requests = req.body;
+      const { biodataId, email } = req.body;
+      const existingRequest = await accessRequestCollection.findOne({
+        biodataId,
+        email,
+      });
+      if (existingRequest) {
+        res.status(400).send("Access request already pending");
+        return;
+      }
+      const result = await accessRequestCollection.insertOne(requests);
+      res.send(result);
+    });
+
+    app.get("/requested-access/:id/:email", async (req, res) => {
+      const id = parseInt(req.params.id);
+      const email = req.params.email;
+      const result = await accessRequestCollection.findOne({
+        biodataId: id,
+        email,
+      });
       res.send(result);
     });
 
