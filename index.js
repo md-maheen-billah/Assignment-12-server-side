@@ -11,7 +11,11 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 app.use(express.json());
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "https://destined-affinity.web.app",
+      "https://destined-affinity.firebaseapp.com",
+    ],
     credentials: true,
     optionsSuccessStatus: 200,
   })
@@ -123,9 +127,82 @@ async function run() {
 
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
-      const result = await usersCollection.findOne({ email });
+      const result = await usersCollection.findOne(
+        { email },
+        { projection: { _id: 0, role: 1, status: 1 } }
+      );
       res.send(result);
     });
+
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.patch(
+      "/users-premium-change/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const update = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const result = await usersCollection.updateOne(filter, {
+          $set: {
+            status: update.status,
+          },
+        });
+        res.send(result);
+      }
+    );
+
+    app.get(
+      "/users-status-pending/:status",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const status = req.params.status;
+        const result = await usersCollection.find({ status }).toArray();
+        res.send(result);
+      }
+    );
+
+    app.patch(
+      "/users-premium-request/:email",
+      verifyToken,
+      async (req, res) => {
+        const tokenEmail = req.user.email;
+        const email = req.params.email;
+        if (tokenEmail !== email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+        const update = req.body;
+        const filter = { email: email };
+        const result = await usersCollection.updateOne(filter, {
+          $set: {
+            status: update.status,
+          },
+        });
+        res.send(result);
+      }
+    );
+
+    app.patch(
+      "/users-role-change/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const update = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const result = await usersCollection.updateOne(filter, {
+          $set: {
+            role: update.role,
+          },
+        });
+        res.send(result);
+      }
+    );
 
     app.put("/biodata", verifyToken, async (req, res) => {
       const user = req.body;
@@ -152,6 +229,29 @@ async function run() {
       };
       const result = await biodataCollection.updateOne(
         query,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    app.put("/users-update/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const update = req.body;
+      console.log(update.name);
+      const filter = { email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          name: update.name,
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
         updateDoc,
         options
       );
@@ -263,11 +363,12 @@ async function run() {
     );
 
     app.get(
-      "/requested-access-dashboard",
+      "/requested-access-dashb/:status",
       verifyToken,
       verifyAdmin,
       async (req, res) => {
-        const result = await accessRequestCollection.find().toArray();
+        const status = req.params.status;
+        const result = await accessRequestCollection.find({ status }).toArray();
         res.send(result);
       }
     );
