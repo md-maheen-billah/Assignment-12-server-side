@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // middlewares
@@ -39,6 +40,7 @@ async function run() {
     const usersCollection = db.collection("users");
     const biodataCollection = db.collection("biodata");
     const accessRequestCollection = db.collection("accessRequest");
+    const paymentCollection = db.collection("payments");
 
     // jwt generate
     app.post("/jwt", async (req, res) => {
@@ -400,6 +402,31 @@ async function run() {
         res.send(result);
       }
     );
+
+    // payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount);
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+        // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
