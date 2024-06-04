@@ -292,6 +292,8 @@ async function run() {
     });
 
     app.get("/biodata-public", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
       const result = await biodataCollection
         .find(
           {},
@@ -307,8 +309,18 @@ async function run() {
             },
           }
         )
+        .skip(page * size)
+        .limit(size)
         .toArray();
       res.send(result);
+    });
+
+    app.get("/biodata-public-count", async (req, res) => {
+      // const filter = req.query.filter
+      // if (filter) query.category = filter
+      const count = await biodataCollection.countDocuments();
+
+      res.send({ count });
     });
 
     app.get("/biodata-details/:id", verifyToken, async (req, res) => {
