@@ -138,7 +138,14 @@ async function run() {
     });
 
     app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await usersCollection.find().toArray();
+      let query = {};
+      if (req.query.search) {
+        // Construct the query with $regex if search query exists
+        query = {
+          name: { $regex: req.query.search, $options: "i" },
+        };
+      }
+      const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
 
