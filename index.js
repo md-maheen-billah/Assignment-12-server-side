@@ -41,6 +41,7 @@ async function run() {
     const biodataCollection = db.collection("biodata");
     const accessRequestCollection = db.collection("accessRequest");
     const paymentCollection = db.collection("payments");
+    const favoriteCollection = db.collection("favorites");
 
     // jwt generate
     app.post("/jwt", async (req, res) => {
@@ -404,7 +405,7 @@ async function run() {
     );
 
     // payment intent
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
       console.log(amount);
@@ -422,9 +423,45 @@ async function run() {
       });
     });
 
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", verifyToken, async (req, res) => {
       const payment = req.body;
       const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
+
+    app.post("/favorites", verifyToken, async (req, res) => {
+      const favorite = req.body;
+      const { biodataId, favorite_email } = req.body;
+      const existingRequest = await favoriteCollection.findOne({
+        biodataId,
+        favorite_email,
+      });
+      if (existingRequest) {
+        res.status(400).send("Already added to Favorite");
+        return;
+      }
+      const result = await favoriteCollection.insertOne(favorite);
+      res.send(result);
+    });
+
+    app.get("/favorites/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const result = await favoriteCollection
+        .find({
+          favorite_email: email,
+        })
+        .toArray();
+      res.send(result);
+    });
+
+    app.delete("/favorites/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await favoriteCollection.deleteOne(query);
       res.send(result);
     });
 
