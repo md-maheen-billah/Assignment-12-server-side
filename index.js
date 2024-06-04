@@ -294,9 +294,16 @@ async function run() {
     app.get("/biodata-public", async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
-      const filter = req.query.filter;
+      const sfilter = req.query.sfilter;
+      const dfilter = req.query.dfilter;
+      const minValue = parseInt(req.query.minValue);
+      const maxValue = parseInt(req.query.maxValue);
       let query = {};
-      if (filter) query.permanentDivision = filter;
+      if (dfilter) query.permanentDivision = dfilter;
+      if (sfilter) query.sex = sfilter;
+      if (!isNaN(minValue) && !isNaN(maxValue)) {
+        query.age = { $gte: minValue, $lte: maxValue };
+      }
       const result = await biodataCollection
         .find(query, {
           projection: {
@@ -316,9 +323,17 @@ async function run() {
     });
 
     app.get("/biodata-public-count", async (req, res) => {
-      // const filter = req.query.filter
-      // if (filter) query.category = filter
-      const count = await biodataCollection.countDocuments();
+      const sfilter = req.query.sfilter;
+      const dfilter = req.query.dfilter;
+      const minValue = parseInt(req.query.minValue);
+      const maxValue = parseInt(req.query.maxValue);
+      let query = {};
+      if (dfilter) query.permanentDivision = dfilter;
+      if (sfilter) query.sex = sfilter;
+      if (!isNaN(minValue) && !isNaN(maxValue)) {
+        query.age = { $gte: minValue, $lte: maxValue };
+      }
+      const count = await biodataCollection.countDocuments(query);
 
       res.send({ count });
     });
