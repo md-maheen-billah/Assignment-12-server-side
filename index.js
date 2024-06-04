@@ -373,6 +373,17 @@ async function run() {
       }
     );
 
+    app.delete(
+      "/requested-access-dashboard/:id",
+      verifyToken,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await accessRequestCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
+
     app.patch(
       "/requested-access-dashboard/:id",
       verifyToken,
