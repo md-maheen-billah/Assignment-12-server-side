@@ -132,8 +132,18 @@ async function run() {
       const email = req.params.email;
       const result = await usersCollection.findOne(
         { email },
-        { projection: { _id: 0, role: 1, status: 1 } }
+        { projection: { _id: 0, role: 1, status: 1, email: 1 } }
       );
+      res.send(result);
+    });
+
+    app.get("/users-premium", async (req, res) => {
+      const result = await usersCollection
+        .find(
+          { status: "premium" },
+          { projection: { _id: 1, status: 1, email: 1 } }
+        )
+        .toArray();
       res.send(result);
     });
 
@@ -162,6 +172,28 @@ async function run() {
             status: update.status,
           },
         });
+        res.send(result);
+      }
+    );
+
+    app.put(
+      "/users-premium-change2/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const update = req.body;
+        const filter = { email: email };
+        const options = { upsert: true };
+        const result = await biodataCollection.updateOne(
+          filter,
+          {
+            $set: {
+              status: update.status,
+            },
+          },
+          options
+        );
         res.send(result);
       }
     );
@@ -235,6 +267,7 @@ async function run() {
         $set: {
           ...user,
           biodataId,
+          status: "regular",
         },
       };
       const result = await biodataCollection.updateOne(
@@ -291,6 +324,35 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/check-biodata/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await biodataCollection.findOne({ email });
+      if (result) {
+        res.send({ exists: true });
+      } else {
+        res.send({ exists: false });
+      }
+    });
+
+    app.get("/biodata-public/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await biodataCollection.findOne(
+        { email },
+        {
+          projection: {
+            _id: 0,
+            biodataId: 1,
+            sex: 1,
+            image: 1,
+            permanentDivision: 1,
+            age: 1,
+            occupation: 1,
+          },
+        }
+      );
+      res.send(result);
+    });
+
     app.get("/biodata-public", async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
@@ -314,6 +376,7 @@ async function run() {
             permanentDivision: 1,
             age: 1,
             occupation: 1,
+            status: 1,
           },
         })
         .skip(page * size)
