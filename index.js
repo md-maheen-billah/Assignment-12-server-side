@@ -138,11 +138,38 @@ async function run() {
     });
 
     app.get("/users-premium", async (req, res) => {
+      const sort = req.query.sort === "asc" ? 1 : -1;
       const result = await usersCollection
-        .find(
-          { status: "premium" },
-          { projection: { _id: 1, status: 1, email: 1 } }
-        )
+        .aggregate([
+          {
+            $match: { status: "premium" },
+          },
+          {
+            $lookup: {
+              from: "biodata",
+              localField: "email",
+              foreignField: "email",
+              as: "pbiodata",
+            },
+          },
+          {
+            $unwind: "$pbiodata",
+          },
+          {
+            $sort: { "pbiodata.age": sort },
+          },
+          {
+            $project: {
+              _id: 0,
+              biodataId: "$pbiodata.biodataId",
+              sex: "$pbiodata.sex",
+              image: "$pbiodata.image",
+              permanentDivision: "$pbiodata.permanentDivision",
+              age: "$pbiodata.age",
+              occupation: "$pbiodata.occupation",
+            },
+          },
+        ])
         .toArray();
       res.send(result);
     });
@@ -267,7 +294,6 @@ async function run() {
         $set: {
           ...user,
           biodataId,
-          status: "regular",
         },
       };
       const result = await biodataCollection.updateOne(
