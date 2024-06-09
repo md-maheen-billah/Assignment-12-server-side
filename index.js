@@ -240,6 +240,26 @@ async function run() {
       });
     });
 
+    app.get("/count-public", async (req, res) => {
+      const totalBiodataCount = await biodataCollection.countDocuments();
+
+      const maleBiodataCount = await biodataCollection.countDocuments({
+        sex: "Male",
+      });
+      const femaleBiodataCount = await biodataCollection.countDocuments({
+        sex: "Female",
+      });
+
+      const marriageCount = await marriageCollection.countDocuments();
+
+      res.send({
+        totalBiodataCount,
+        maleBiodataCount,
+        femaleBiodataCount,
+        marriageCount,
+      });
+    });
+
     app.put(
       "/users-premium-change2/:email",
       verifyToken,
