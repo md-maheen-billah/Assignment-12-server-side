@@ -231,7 +231,33 @@ async function run() {
       verifyAdmin,
       async (req, res) => {
         const status = req.params.status;
-        const result = await usersCollection.find({ status }).toArray();
+        const result = await usersCollection
+          .aggregate([
+            {
+              $match: { status },
+            },
+            {
+              $lookup: {
+                from: "biodata",
+                localField: "email",
+                foreignField: "email",
+                as: "pbiodata",
+              },
+            },
+            {
+              $unwind: "$pbiodata",
+            },
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                status: 1,
+                biodataId: "$pbiodata.biodataId",
+              },
+            },
+          ])
+          .toArray();
         res.send(result);
       }
     );
