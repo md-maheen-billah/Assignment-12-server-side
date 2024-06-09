@@ -365,6 +365,11 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/marriages", async (req, res) => {
+      const result = await marriageCollection.find().toArray();
+      res.send(result);
+    });
+
     app.put("/biodata", verifyToken, async (req, res) => {
       const user = req.body;
       const query = { email: user?.email };
