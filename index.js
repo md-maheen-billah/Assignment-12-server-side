@@ -203,6 +203,42 @@ async function run() {
       }
     );
 
+    app.get("/admin-dashboard", verifyToken, verifyAdmin, async (req, res) => {
+      const totalBiodataCount = await biodataCollection.countDocuments();
+
+      const maleBiodataCount = await biodataCollection.countDocuments({
+        sex: "Male",
+      });
+      const femaleBiodataCount = await biodataCollection.countDocuments({
+        sex: "Female",
+      });
+
+      const premiumBiodataCount = await usersCollection.countDocuments({
+        status: "premium",
+      });
+
+      const totalPayments = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$price" },
+            },
+          },
+        ])
+        .toArray();
+
+      const totalPaymentsSum =
+        totalPayments.length > 0 ? totalPayments[0].total : 0;
+      res.send({
+        totalBiodataCount,
+        maleBiodataCount,
+        femaleBiodataCount,
+        premiumBiodataCount,
+        totalPaymentsSum,
+      });
+    });
+
     app.put(
       "/users-premium-change2/:email",
       verifyToken,
