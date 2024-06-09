@@ -366,6 +366,24 @@ async function run() {
     });
 
     app.get("/marriages", async (req, res) => {
+      const result = await marriageCollection
+        .find(
+          {},
+          {
+            projection: {
+              _id: 0,
+              rate: 1,
+              date: 1,
+              image: 1,
+              story: 1,
+            },
+          }
+        )
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/marriages-admin", verifyToken, verifyAdmin, async (req, res) => {
       const result = await marriageCollection.find().toArray();
       res.send(result);
     });
