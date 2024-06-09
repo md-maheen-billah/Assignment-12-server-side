@@ -42,6 +42,7 @@ async function run() {
     const accessRequestCollection = db.collection("accessRequest");
     const paymentCollection = db.collection("payments");
     const favoriteCollection = db.collection("favorites");
+    const marriageCollection = db.collection("marriages");
 
     // jwt generate
     app.post("/jwt", async (req, res) => {
@@ -334,6 +335,35 @@ async function run() {
         res.send(result);
       }
     );
+
+    app.put("/marriages", verifyToken, async (req, res) => {
+      const post = req.body;
+      const filter = { email: post?.email };
+
+      // save user for the first time
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...post,
+        },
+      };
+      const result = await marriageCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    app.get("/marriages/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const result = await marriageCollection.findOne({ email });
+      res.send(result);
+    });
 
     app.put("/biodata", verifyToken, async (req, res) => {
       const user = req.body;
