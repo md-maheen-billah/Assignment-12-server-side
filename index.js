@@ -138,6 +138,28 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/marriage-done/:biodataId", async (req, res) => {
+      const biodataId = parseInt(req.params.biodataId);
+
+      try {
+        // Find a document where fid or mid matches biodataId
+        const result = await marriageCollection.findOne({
+          $or: [{ fbid: biodataId }, { mbid: biodataId }],
+        });
+
+        if (result) {
+          // If match found, send "Married" as response
+          res.send("Married");
+        } else {
+          // If no match found, send appropriate message
+          res.send("Not Married");
+        }
+      } catch (error) {
+        console.error("Error finding document:", error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+
     app.get("/users-premium", async (req, res) => {
       const sort = req.query.sort === "asc" ? 1 : -1;
       const result = await usersCollection
