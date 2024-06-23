@@ -543,11 +543,16 @@ async function run() {
       const dfilter = req.query.dfilter;
       const minValue = parseInt(req.query.minValue);
       const maxValue = parseInt(req.query.maxValue);
+      const maxHeight = parseInt(req.query.maxHeight);
+      const minHeight = parseInt(req.query.minHeight);
       let query = {};
       if (dfilter) query.permanentDivision = dfilter;
       if (sfilter) query.sex = sfilter;
       if (!isNaN(minValue) && !isNaN(maxValue)) {
         query.age = { $gte: minValue, $lte: maxValue };
+      }
+      if (!isNaN(minHeight) && !isNaN(maxHeight)) {
+        query.height = { $gte: minHeight, $lte: maxHeight };
       }
       const result = await biodataCollection
         .find(query, {
@@ -573,11 +578,16 @@ async function run() {
       const dfilter = req.query.dfilter;
       const minValue = parseInt(req.query.minValue);
       const maxValue = parseInt(req.query.maxValue);
+      const maxHeight = parseInt(req.query.maxHeight);
+      const minHeight = parseInt(req.query.minHeight);
       let query = {};
       if (dfilter) query.permanentDivision = dfilter;
       if (sfilter) query.sex = sfilter;
       if (!isNaN(minValue) && !isNaN(maxValue)) {
         query.age = { $gte: minValue, $lte: maxValue };
+      }
+      if (!isNaN(minHeight) && !isNaN(maxHeight)) {
+        query.height = { $gte: minHeight, $lte: maxHeight };
       }
       const count = await biodataCollection.countDocuments(query);
 
